@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SN Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; background-color: var(--bg); margin: 0; }
+        #scanner-container { width: 100%; max-width: 450px; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; }
+        .result-container { width: 100%; max-width: 450px; margin-top: 20px; text-align: left; }
+        .output-box { 
+            background: #fff; padding: 15px; border: 2px solid var(--primary); border-radius: 10px; 
+            min-height: 100px; font-size: 1.1rem; word-break: break-all; margin-bottom: 15px;
+        }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        .btn-copy { background-color: var(--success); }
+        .btn-clear { background-color: var(--danger); }
+        #status-msg { color: red; font-size: 0.8rem; margin-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h3 style="margin-top:0;">Seriennummer-Sammler</h3>
+    
+    <div id="scanner-container">
+        <div id="reader"></div>
+        <div id="status-msg"></div>
+    </div>
+
+    <div class="result-container">
+        <div style="font-size: 0.8rem; color: #555; margin-bottom: 5px;">Gescannte Liste (kommagetrennt):</div>
+        <div id="scanned-list" class="output-box">Noch keine Scans vorhanden...</div>
+        
+        <div class="btn-group">
+            <button class="btn-copy" onclick="copyList()">📋 Kopieren</button>
+            <button class="btn-clear" onclick="clearList()">🗑️ Löschen</button>
+        </div>
+    </div>
+
+    <script>
+        let serials = [];
+        let lastCode = "";
+        let lastTime = 0;
+        let audioCtx = null;
+
+        function playBeep() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.value = 880; gain.gain.value = 0.1;
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function onScanSuccess(decodedText) {
+            const now = Date.now();
+            if (decodedText === lastCode && (now - lastTime) < 2000) return;
+            
+            lastCode = decodedText;
+            lastTime = now;
+            serials.push(decodedText);
+            
+            document.getElementById('scanned-list').innerText = serials.join(', ');
+            playBeep();
+            if (navigator.vibrate) navigator.vibrate(100);
+            
+            // Sofortiges Kopieren für Slack vorbereiten
+            navigator.clipboard.writeText(serials.join(', ')).catch(() => {});
+        }
+
+        async function copyList() {
+            if (serials.length === 0) return;
+            try {
+                await navigator.clipboard.writeText(serials.join(', '));
+                alert("Liste kopiert!");
+            } catch (err) { alert("Kopieren fehlgeschlagen."); }
+        }
+
+        function clearList() {
+            if (confirm("Liste wirklich leeren?")) {
+                serials = [];
+                lastCode = "";
+                document.getElementById('scanned-list').innerText = "Noch keine Scans vorhanden...";
+            }
+        }
+
+        // Scanner initialisieren mit Fehler-Anzeige
+        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        scanner.render(onScanSuccess, (err) => {
+            if (err && err.includes("NotAllowedError")) {
+                document.getElementById('status-msg').innerText = "KAMERA BLOCKIERT: Bitte auf das Schloss-Icon in der Adressleiste tippen und Kamera auf 'Zulassen' stellen.";
+            }
+        });
+
+        document.body.addEventListener('click', () => { if(!audioCtx) audioCtx = new AudioContext(); }, {once: true});
+    </script>
+</body>
+</html>
