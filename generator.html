@@ -3,47 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schurr QR-PDF-Druck</title>
+    <title>Schurr QR-Etikett v3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --primary: #007bff; --bg: #f4f7f6; }
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: var(--bg); }
-        .controls { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: var(--bg); color: black; }
+        
+        /* Benutzeroberfläche */
+        .controls { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; width: 100%; max-width: 450px; text-align: center; border: 1px solid #eee; }
+        .controls h3 { margin-top: 0; }
         .input-row { display: flex; justify-content: center; gap: 20px; margin: 15px 0; }
-        input { width: 80px; padding: 10px; font-size: 1.2rem; text-align: center; border: 2px solid #ddd; border-radius: 8px; }
-        label { font-size: 0.8rem; color: #666; display: block; margin-bottom: 5px; }
-        .btn-pdf { background: #e74c3c; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; margin-top: 10px; }
+        .input-group { display: flex; flex-direction: column; align-items: center; }
+        input { width: 90px; padding: 12px; font-size: 1.2rem; text-align: center; border: 2px solid #ddd; border-radius: 8px; font-weight: bold; }
+        label { font-size: 0.8rem; color: #666; margin-bottom: 5px; }
+        
+        .btn-pdf { background: #e74c3c; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; transition: background 0.2s; }
+        .btn-pdf:hover { background-color: #c0392b; }
+
+        /* --- DRUCK-BEREICH VORSCHAU (Exakt 50x30mm) --- */
         #preview-label { margin-top: 20px; border: 1px dashed #999; padding: 10px; background: #fff; border-radius: 8px; }
         
-        /* Das Etikett nur für die Bildschirm-Vorschau */
-        .label-preview {
-            width: 50mm; height: 30mm; background: white; display: flex; justify-content: space-between;
-            align-items: center; padding: 2mm; box-sizing: border-box; border: 1px solid #eee;
+        .label-page {
+            width: 50mm;
+            height: 30mm;
+            background: white;
+            display: flex;
+            justify-content: space-between; /* Links QR, Rechts Info */
+            align-items: stretch; /* Volle Höhe nutzen */
+            border: 1px solid #eee; /* Nur Vorschau */
+            padding: 1.5mm;
+            box-sizing: border-box;
+            color: black;
+            overflow: hidden;
         }
-        .qr-section { width: 20mm; text-align: center; }
-        .serial-text { font-size: 10pt; font-weight: bold; margin-top: 2px; font-family: monospace; }
-        .info-section { width: 25mm; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
-        .logo-img { width: 22mm; height: auto; }
-        .slogan { font-size: 4pt; font-weight: bold; line-height: 1.1; }
+
+        /* 1. Linke Spalte: QR-Code MAX (ca. 45% Breite) */
+        .qr-section {
+            width: 21mm; /* Maximiert */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between; /* QR oben, Nummer unten */
+            height: 100%;
+        }
+
+        /* Platzhalter für den QR-Code, damit er quadratisch bleibt */
+        .qr-placeholder {
+            width: 21mm; 
+            height: 21mm; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         
-        /* Unsichtbarer QR-Buffer für PDF-Export */
+        /* QR-Bibliothek generiert ein img/canvas, das wir hier skaliern */
+        .qr-placeholder img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* 2. 7-stellige Nummer (Fett & Groß darunter) */
+        .serial-number {
+            font-size: 14pt; /* Möglichst groß */
+            font-weight: bold;
+            font-family: 'Courier New', monospace; /* Gut lesbar */
+            line-height: 1;
+            margin-top: auto; /* Ganz nach unten schieben */
+        }
+
+        /* 3. Rechte Spalte: Branding (ca. 55% Breite) */
+        .info-section {
+            width: 25mm;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Mittig ausrichten */
+            justify-content: center; /* Vertikal mittig */
+            text-align: center;
+            padding-left: 1mm;
+        }
+
+        /* Logo SCHURR (Rechts neben QR, unverzerrt) */
+        .logo-box {
+            width: 24mm;
+            height: 12mm; /* Feste Höhe für Logo-Bereich */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2mm;
+        }
+        
+        .logo-box img {
+            max-width: 100%; /* Passt Breite an */
+            max-height: 100%; /* Verhindert Verzerrung */
+            height: auto;
+            width: auto;
+        }
+
+        /* 4. www-Adresse darunter */
+        .website-url {
+            font-size: 7.5pt;
+            font-weight: bold;
+            color: black;
+            margin-bottom: 1.5mm;
+        }
+
+        /* 5. Made in Germany! ganz unten */
+        .origin-text {
+            font-size: 7pt;
+            font-weight: normal;
+            font-style: italic;
+            margin-top: auto; /* Nach unten schieben */
+        }
+
+        /* Container für den PDF-Export (unsichtbar) */
         #qr-buffer { position: absolute; left: -9999px; top: 0; }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <h3 style="margin-top:0">Schurr Etiketten-PDF</h3>
+        <h3>Schurr Etiketten v3</h3>
         <div class="input-row">
-            <div><label>Start-Nr.</label><input type="number" id="startNum" value="001" oninput="updatePreview()"></div>
-            <div><label>Anzahl</label><input type="number" id="printCount" value="1"></div>
+            <div class="input-group">
+                <label>Start-Nr.</label>
+                <input type="number" id="startNum" value="001" min="1" max="999" oninput="updatePreview()">
+            </div>
+            <div class="input-group">
+                <label>Anzahl</label>
+                <input type="number" id="printCount" value="1" min="1" max="50">
+            </div>
         </div>
-        <button class="btn-pdf" onclick="generatePDF()">📄 PDF erstellen & drucken</button>
+        
+        <button class="btn-pdf" onclick="generatePDF()">📄 PDF für HOIN erstellen</button>
         
         <div id="preview-label">
-            <div style="font-size:0.7rem; color:#999; margin-bottom:5px;">VORSCHAU</div>
-            <div id="preview-render" class="label-preview"></div>
+            <div style="font-size:0.7rem; color:#999; margin-bottom:5px;">LIVE-VORSCHAU</div>
+            <div id="preview-render" class="label-page">
+                <div class="qr-section">
+                    <div id="qr-preview" class="qr-placeholder"></div>
+                    <div class="serial-number" id="serial-output">0012026</div>
+                </div>
+                
+                <div class="info-section">
+                    <div class="logo-box">
+                        <img src="Schurr Logo GmbH.jpg" alt="SCHURR Logo">
+                    </div>
+                    
+                    <div class="website-url">schurr-geraetebau.de</div>
+                    
+                    <div class="origin-text">Made in Germany!</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -52,75 +164,114 @@
     <script>
         const { jsPDF } = window.jspdf;
 
+        // Initialisierung
         window.onload = updatePreview;
 
+        // Hilfsfunktion: 7-stellige ID erstellen
         function getFullID(num) {
-            return num.toString().padStart(3, '0') + new Date().getFullYear();
+            const formattedNum = num.toString().padStart(3, '0');
+            const year = new Date().getFullYear();
+            return `${formattedNum}${year}`;
         }
 
+        // Bildschirm-Vorschau aktualisieren
         function updatePreview() {
-            const id = getFullID(document.getElementById('startNum').value || 1);
-            const container = document.getElementById('preview-render');
-            container.innerHTML = `
-                <div class="qr-section"><div id="qr-preview"></div><div class="serial-text">${id}</div></div>
-                <div class="info-section">
-                    <div style="font-size:5pt; font-weight:bold;">www.schurr-geraetebau.de</div>
-                    <img src="Schurr Logo GmbH.jpg" class="logo-img">
-                    <div class="slogan">SCHURR BÜRSTEN BÜRSTEN BESSER.<br>MAKE SURE THAT IT’S SCHURR.</div>
-                </div>`;
-            new QRCode(document.getElementById('qr-preview'), { text: id, width: 70, height: 70 });
+            const numInput = document.getElementById('startNum').value || 1;
+            const id = getFullID(numInput);
+            
+            // Text-Ausgaben aktualisieren
+            document.getElementById('serial-output').innerText = id;
+            
+            // QR-Code in der Vorschau neu zeichnen
+            const qrPreviewDiv = document.getElementById('qr-preview');
+            qrPreviewDiv.innerHTML = ''; // Alten löschen
+            
+            new QRCode(qrPreviewDiv, {
+                text: id,
+                width: 100, // Pixelgröße für Vorschaubild
+                height: 100,
+                correctLevel : QRCode.CorrectLevel.H
+            });
         }
 
+        // PDF-Generierung für den Druck
         async function generatePDF() {
             const startNum = parseInt(document.getElementById('startNum').value);
             const count = parseInt(document.getElementById('printCount').value);
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [50, 30] });
+            
+            // PDF im Querformat erstellen (landscape), Maße in mm
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [50, 30] // Exakte Etikettengröße
+            });
 
+            const qrBuffer = document.getElementById('qr-buffer');
+            const imgUrl = 'Schurr Logo GmbH.jpg'; // Logo-Quelle
+
+            // Druckschleife für die gewünschte Anzahl
             for (let i = 0; i < count; i++) {
-                if (i > 0) pdf.addPage([50, 30], 'landscape');
+                if (i > 0) pdf.addPage([50, 30], 'landscape'); // Neue Seite für jedes weitere Etikett
                 
                 const currentId = getFullID(startNum + i);
                 
-                // QR-Code im Buffer generieren
-                const buffer = document.getElementById('qr-buffer');
-                buffer.innerHTML = '';
-                new QRCode(buffer, { text: currentId, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.H });
+                // 1. QR-Code im Puffer generieren (hohe Auflösung für Druck)
+                qrBuffer.innerHTML = '';
+                new QRCode(qrBuffer, {
+                    text: currentId,
+                    width: 200, 
+                    height: 200,
+                    correctLevel : QRCode.CorrectLevel.H
+                });
                 
-                // Warten bis QR-Code gerendert ist
-                await new Promise(r => setTimeout(r, 100));
-                const qrCanvas = buffer.querySelector('canvas');
+                // Warten, bis der QR-Code gerendert ist
+                await new Promise(r => setTimeout(r, 150));
+                const qrCanvas = qrBuffer.querySelector('canvas');
                 const qrData = qrCanvas.toDataURL("image/png");
 
-                // --- PDF Zeichnen ---
-                // QR-Code & ID
-                pdf.addImage(qrData, 'PNG', 2, 2, 20, 20);
-                pdf.setFontSize(12);
-                pdf.setFont("courier", "bold");
-                pdf.text(currentId, 12, 26, { align: "center" });
-
-                // Rechts: Texte & Logo
-                pdf.setFont("helvetica", "bold");
-                pdf.setFontSize(6);
-                pdf.text("www.schurr-geraetebau.de", 37, 5, { align: "center" });
+                // --- PDF Zeichnen (Einheit: mm) ---
                 
-                // Logo (Da Bilder im PDF kompliziert sind, nutzen wir hier einen Platzhalter oder laden das Bild)
-                // Einfachheitshalber fügen wir das Logo als Bild-Objekt hinzu wenn es geladen ist
-                const img = new Image();
-                img.src = 'Schurr Logo GmbH.jpg';
-                pdf.addImage(img, 'JPEG', 27, 7, 20, 10);
+                // Positionen basierend auf 50x30mm Layout
+                
+                // Linke Spalte (Breite ca. 21mm)
+                
+                // 1. QR-Code (Möglichst groß)
+                pdf.addImage(qrData, 'PNG', 1.5, 1.5, 21, 21); // x, y, width, height
+                
+                // 2. 7-stellige Nummer (Fett & Groß darunter)
+                pdf.setFont("courier", "bold");
+                pdf.setFontSize(14); // Sehr groß
+                pdf.text(currentId, 12, 27.5, { align: "center" }); // Mittig unter QR
 
-                pdf.setFontSize(5);
-                pdf.text("SCHURR BÜRSTEN BÜRSTEN BESSER.", 37, 23, { align: "center" });
-                pdf.text("MAKE SURE THAT IT’S SCHURR.", 37, 26, { align: "center" });
+                // Rechte Spalte (Breite ca. 26mm, x-Start bei ca. 24mm)
+                
+                // 3. Logo SCHURR (Rechts, unverzerrt)
+                const img = new Image();
+                img.src = imgUrl;
+                // addImage skaliert das Bild automatisch, um Verzerrungen zu vermeiden,
+                // wenn nur eine Dimension (Breite oder Höhe) angegeben wird.
+                // Wir geben die Breite vor, die Höhe wird berechnet (0).
+                pdf.addImage(img, 'JPEG', 25, 4, 23, 0); // x, y, width, height(0=auto)
+
+                // 4. www-Adresse darunter
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(8);
+                pdf.text("www.schurr-geraetebau.de", 36.5, 18, { align: "center" }); // Vertikal mittig platziert
+
+                // 5. Made in Germany! ganz unten
+                pdf.setFont("helvetica", "normal");
+                pdf.setFontType("italic");
+                pdf.setFontSize(7.5);
+                pdf.text("Made in Germany!", 36.5, 27.5, { align: "center" }); // Ganz unten rechts
             }
 
-            // PDF im neuen Fenster öffnen (Triggert Druckdialog auf Android)
+            // PDF erstellen und im neuen Tab öffnen
             const blob = pdf.output('bloburl');
             window.open(blob, '_blank');
             
-            // Nummer erhöhen
+            // Nach dem Druck: Startnummer für das nächste Mal erhöhen
             document.getElementById('startNum').value = (startNum + count).toString().padStart(3, '0');
-            updatePreview();
+            updatePreview(); // Vorschau aktualisieren
         }
     </script>
 </body>
