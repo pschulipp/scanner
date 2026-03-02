@@ -98,7 +98,6 @@
         window.onload = () => {
             const today = new Date();
             document.getElementById('kwInput').value = getWeekNumber(today).toString().padStart(2, '0');
-            // Jahr 2-stellig setzen (z.B. 2026 -> 26)
             document.getElementById('yearInput').value = today.getFullYear().toString().slice(-2);
             setTimeout(updatePreview, 500);
         };
@@ -107,7 +106,7 @@
             const sn = num.toString().padStart(3, '0');
             const kw = document.getElementById('kwInput').value.toString().padStart(2, '0');
             const yr = document.getElementById('yearInput').value.toString().slice(-2).padStart(2, '0');
-            return sn + kw + yr; // 3 + 2 + 2 = 7 Ziffern
+            return sn + kw + yr; 
         }
 
         function updatePreview() {
@@ -143,10 +142,12 @@
 
                     const img = new Image();
                     img.src = 'Schurr Logo GmbH.jpg';
-                    pdf.addImage(img, 'JPEG', 25, 3, 23, 12); 
+                    // Logo unverzerrt: Höhe auf 0 setzen für automatische Proportionalität
+                    pdf.addImage(img, 'JPEG', 25, 3, 23, 0); 
 
                     pdf.setFont("helvetica", "bold");
-                    pdf.setFontSize(8);
+                    // Schriftgröße für Webseite verringert
+                    pdf.setFontSize(7); 
                     pdf.text("schurr-geraetebau.de", 36.5, 19, { align: "center" });
                     
                     pdf.setFontSize(9);
