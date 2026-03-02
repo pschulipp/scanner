@@ -3,23 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schurr QR-Profi-Druck</title>
+    <title>Schurr QR-Profi-Vorschau</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --primary: #007bff; --bg: #f4f7f6; }
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: var(--bg); }
+        :root { --primary: #007bff; --bg: #f4f7f6; --slack: #4A154B; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: var(--bg); margin: 0; }
         
+        /* Benutzeroberfläche */
         .controls { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; width: 100%; max-width: 450px; text-align: center; }
         .input-row { display: flex; justify-content: center; gap: 20px; margin: 15px 0; }
         .input-group { display: flex; flex-direction: column; align-items: center; }
         input { width: 90px; padding: 10px; font-size: 1.2rem; text-align: center; border: 2px solid #ddd; border-radius: 8px; font-weight: bold; }
         label { font-size: 0.8rem; color: #666; margin-bottom: 5px; }
         
-        button { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; }
-
-        /* --- ETIKETTEN-STYLING (50x30mm) --- */
-        #print-container { display: flex; flex-direction: column; align-items: center; }
+        .btn-print { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; margin-top: 10px; }
         
+        /* Vorschau-Bereich am Bildschirm */
+        #preview-label { margin-top: 20px; border: 1px dashed #999; padding: 10px; background: #fff; border-radius: 8px; }
+        .preview-title { font-size: 0.7rem; color: #999; text-transform: uppercase; margin-bottom: 5px; text-align: center; }
+
+        /* --- DAS ETIKETT (50x30mm) --- */
         .label-page {
             width: 50mm;
             height: 30mm;
@@ -27,46 +30,35 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid #ccc; /* Vorschau */
-            padding: 1.5mm;
+            padding: 1.5mm 2mm;
             box-sizing: border-box;
-            page-break-after: always; /* Jedes Etikett auf neue Seite */
-            margin-top: 10px;
+            page-break-after: always;
+            color: black;
+            overflow: hidden;
         }
 
-        /* Linke Seite: Großer QR + Nummer */
-        .qr-section {
-            width: 22mm;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .qr-placeholder { width: 21mm; height: 21mm; } /* QR-Größe maximiert */
-        .serial-text { font-size: 12pt; font-weight: bold; margin-top: 1mm; font-family: monospace; }
+        /* Links: QR-Code & ID */
+        .qr-section { width: 22mm; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .qr-placeholder { width: 21mm; height: 21mm; }
+        .serial-text { font-size: 11pt; font-weight: bold; margin-top: 1mm; font-family: 'Courier New', monospace; }
 
-        /* Rechte Seite: Info-Block */
-        .info-section {
-            width: 24mm;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            text-align: center;
-        }
+        /* Rechts: Branding */
+        .info-section { width: 24mm; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
+        .web-link { font-size: 5.5pt; font-weight: bold; }
+        .logo-small { width: 20mm; height: auto; margin: 1mm 0; }
+        .slogan-block { font-size: 4.2pt; line-height: 1.2; font-weight: bold; text-transform: uppercase; }
 
-        .web-link { font-size: 6pt; font-weight: bold; }
-        .logo-small { width: 22mm; height: auto; margin: 1mm 0; }
-        .slogan-block { font-size: 4.5pt; line-height: 1.1; font-weight: bold; text-transform: uppercase; }
-
-        /* --- DRUCK-STEUERUNG --- */
+        /* --- DRUCK-LOGIK --- */
         @media print {
             body { padding: 0; background: white; }
-            .controls { display: none; }
-            .label-page { border: none; margin: 0; }
+            .controls, .preview-title, #preview-label-static { display: none !important; }
+            .label-page { border: none !important; margin: 0 !important; }
+            #print-container { display: block !important; }
             @page { size: 50mm 30mm; margin: 0; }
         }
+        
+        /* Container für den tatsächlichen Druckvorgang (versteckt am Screen) */
+        #print-container { display: none; }
     </style>
 </head>
 <body>
@@ -76,41 +68,41 @@
         
         <div class="input-row">
             <div class="input-group">
-                <label>Start (3-stellig)</label>
-                <input type="number" id="startNum" value="001" min="1" max="999">
+                <label>Start-Nr.</label>
+                <input type="number" id="startNum" value="001" min="1" max="999" oninput="updatePreview()">
             </div>
             <div class="input-group">
-                <label>Anzahl Etiketten</label>
+                <label>Anzahl</label>
                 <input type="number" id="printCount" value="1" min="1" max="50">
             </div>
         </div>
         
-        <button onclick="generateLabels()">Etiketten erstellen & drucken</button>
+        <button class="btn-print" onclick="startPrint()">🖨️ Jetzt drucken</button>
+        
+        <div id="preview-label">
+            <div class="preview-title">Live-Vorschau (1. Etikett)</div>
+            <div id="preview-render"></div>
+        </div>
     </div>
 
-    <div id="print-container">
-        </div>
+    <div id="print-container"></div>
 
     <script>
-        function generateLabels() {
-            const container = document.getElementById('print-container');
-            const startNum = parseInt(document.getElementById('startNum').value);
-            const count = parseInt(document.getElementById('printCount').value);
+        // Initialisierung
+        window.onload = updatePreview;
+
+        function getFullID(num) {
+            const formattedNum = num.toString().padStart(3, '0');
             const year = new Date().getFullYear();
-            
-            container.innerHTML = ''; // Vorherige Etiketten löschen
+            return `${formattedNum}${year}`;
+        }
 
-            for (let i = 0; i < count; i++) {
-                let currentNum = (startNum + i).toString().padStart(3, '0');
-                let fullID = `${currentNum}${year}`; // 7-stellig ohne Bindestrich
-
-                // Etiketten-HTML erstellen
-                const label = document.createElement('div');
-                label.className = 'label-page';
-                label.innerHTML = `
+        function createLabelHTML(id, index) {
+            return `
+                <div class="label-page" id="label-${index}">
                     <div class="qr-section">
-                        <div id="qr-${i}" class="qr-placeholder"></div>
-                        <div class="serial-text">${fullID}</div>
+                        <div id="qr-box-${index}" class="qr-placeholder"></div>
+                        <div class="serial-text">${id}</div>
                     </div>
                     <div class="info-section">
                         <div class="web-link">www.schurr-geraetebau.de</div>
@@ -120,24 +112,45 @@
                             MAKE SURE THAT IT’S SCHURR.
                         </div>
                     </div>
-                `;
-                container.appendChild(label);
+                </div>
+            `;
+        }
 
-                // QR-Code in das Etikett generieren
-                new QRCode(document.getElementById(`qr-${i}`), {
-                    text: fullID,
-                    width: 80,
-                    height: 80,
-                    correctLevel: QRCode.CorrectLevel.H
+        function updatePreview() {
+            const previewContainer = document.getElementById('preview-render');
+            const startNum = document.getElementById('startNum').value || 1;
+            const id = getFullID(startNum);
+            
+            previewContainer.innerHTML = createLabelHTML(id, 'preview');
+            
+            new QRCode(document.getElementById('qr-box-preview'), {
+                text: id, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function startPrint() {
+            const printContainer = document.getElementById('print-container');
+            const startNum = parseInt(document.getElementById('startNum').value);
+            const count = parseInt(document.getElementById('printCount').value);
+            
+            printContainer.innerHTML = ''; 
+
+            for (let i = 0; i < count; i++) {
+                const currentId = getFullID(startNum + i);
+                const labelWrapper = document.createElement('div');
+                labelWrapper.innerHTML = createLabelHTML(currentId, i);
+                printContainer.appendChild(labelWrapper.firstChild);
+
+                new QRCode(document.getElementById(`qr-box-${i}`), {
+                    text: currentId, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.H
                 });
             }
 
-            // Kurze Pause für das Rendering, dann Druckdialog
             setTimeout(() => {
                 window.print();
-                // Nach dem Druck: Startnummer für das nächste Mal erhöhen
                 document.getElementById('startNum').value = (startNum + count).toString().padStart(3, '0');
-            }, 800);
+                updatePreview();
+            }, 500);
         }
     </script>
 </body>
