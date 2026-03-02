@@ -3,11 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SN Scanner</title>
+    <title>Scan Seriennummer QR-Code</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; }
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; background-color: var(--bg); margin: 0; }
+        
+        /* Logo-Styling */
+        .logo-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+        .logo-container img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
         #scanner-container { width: 100%; max-width: 450px; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         #reader { width: 100%; border-radius: 8px; overflow: hidden; }
         .result-container { width: 100%; max-width: 450px; margin-top: 20px; text-align: left; }
@@ -24,7 +40,11 @@
 </head>
 <body>
 
-    <h3 style="margin-top:0;">Seriennummer-Sammler</h3>
+    <div class="logo-container">
+        <img src="Schurr Logo GmbH.jpg" alt="Schurr Gerätebau GmbH Logo">
+    </div>
+
+    <h3 style="margin-top:0; color: #333;">Scan Seriennummer QR-Code</h3>
     
     <div id="scanner-container">
         <div id="reader"></div>
@@ -68,7 +88,6 @@
             playBeep();
             if (navigator.vibrate) navigator.vibrate(100);
             
-            // Sofortiges Kopieren für Slack vorbereiten
             navigator.clipboard.writeText(serials.join(', ')).catch(() => {});
         }
 
@@ -88,11 +107,10 @@
             }
         }
 
-        // Scanner initialisieren mit Fehler-Anzeige
         const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
         scanner.render(onScanSuccess, (err) => {
             if (err && err.includes("NotAllowedError")) {
-                document.getElementById('status-msg').innerText = "KAMERA BLOCKIERT: Bitte auf das Schloss-Icon in der Adressleiste tippen und Kamera auf 'Zulassen' stellen.";
+                document.getElementById('status-msg').innerText = "KAMERA BLOCKIERT: Bitte auf das Schloss-Icon tippen und Kamera zulassen.";
             }
         });
 
