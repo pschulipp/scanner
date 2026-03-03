@@ -19,67 +19,72 @@
             min-height: 100vh;
         }
         
-        /* Logo passt sich flexibel an */
         .logo-container { 
-            width: 90%; 
-            max-width: 400px; 
+            width: 85%; 
+            max-width: 350px; 
             display: flex; 
             justify-content: center; 
-            margin-bottom: 15px; 
+            margin-bottom: 10px; 
         }
-        .logo-container img { width: 100%; height: auto; }
+        .logo-container img { width: 100%; height: auto; border-radius: 4px; }
 
-        /* RESPONSIVE SCANNER-CONTAINER */
         #scanner-wrapper { 
             width: 100%; 
-            max-width: 600px; /* Begrenzung für sehr große Bildschirme */
+            max-width: 500px; 
             background: white; 
-            padding: 10px; 
+            padding: 5px; 
             border-radius: 12px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
             box-sizing: border-box;
+            position: relative;
         }
 
-        /* Das eigentliche Kamera-Element füllt nun 100% der Breite */
+        /* Kamera-Fenster */
         #reader { 
             width: 100% !important; 
             border-radius: 8px; 
             overflow: hidden; 
             border: none !important; 
+            background: #000;
         }
 
-        .result-container { width: 100%; max-width: 600px; margin-top: 20px; }
+        .result-container { width: 100%; max-width: 500px; margin-top: 15px; }
         
         .output-box { 
             background: #fff; 
-            padding: 15px; 
+            padding: 12px; 
             border: 2px solid var(--primary); 
             border-radius: 10px; 
-            min-height: 80px; 
+            min-height: 60px; 
             font-size: 1.1rem; 
             word-break: break-all; 
             margin-bottom: 15px; 
+            font-family: monospace;
         }
         
-        .btn-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-        .btn-row { display: flex; gap: 10px; }
+        .btn-group { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .btn-row { display: flex; gap: 8px; }
         
         button { 
             flex: 1; 
-            padding: 18px; 
+            padding: 16px; 
             border: none; 
             border-radius: 8px; 
             color: white; 
             font-weight: bold; 
             font-size: 1.1rem; 
             cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         .btn-copy { background-color: var(--success); }
         .btn-clear { background-color: var(--danger); }
-        .btn-slack { background-color: var(--slack); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-slack { background-color: var(--slack); width: 100%; }
         
-        #status-msg { color: red; font-size: 0.9rem; margin-top: 10px; text-align: center; font-weight: bold; }
+        #status-msg { color: #555; font-size: 0.9rem; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
@@ -88,11 +93,11 @@
         <img src="Schurr Logo GmbH.jpg" alt="Schurr Logo">
     </div>
 
-    <h3 style="margin: 0 0 15px 0; font-size: 1.2rem; text-align: center;">Scan Seriennummer QR-Code</h3>
+    <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">Scan Seriennummer QR-Code</h3>
     
     <div id="scanner-wrapper">
         <div id="reader"></div>
-        <div id="status-msg"></div>
+        <div id="status-msg">Initialisiere Kamera...</div>
     </div>
 
     <div class="result-container">
@@ -104,6 +109,7 @@
                 <button class="btn-clear" onclick="clearList()">🗑️ Löschen</button>
             </div>
             <button class="btn-slack" onclick="openSlack()">
+                <svg width="20" height="20" viewBox="0 0 122.8 122.8"><path d="M25.8 77.6c0 7.1-5.8 12.9-12.9 12.9S0 84.7 0 77.6s5.8-12.9 12.9-12.9h12.9v12.9zm6.5 0c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9v32.3c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V77.6z" fill="#E01E5A"/><path d="M45.2 25.8c-7.1 0-12.9-5.8-12.9-12.9S38.1 0 45.2 0s12.9 5.8 12.9 12.9v12.9H45.2zm0 6.5c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H12.9C5.8 58.1 0 52.3 0 45.2s5.8-12.9 12.9-12.9h32.3z" fill="#36C5F0"/><path d="M97 45.2c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9-5.8 12.9-12.9 12.9H97V45.2zm-6.5 0c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V12.9C64.7 5.8 70.5 0 77.6 0s12.9 5.8 12.9 12.9v32.3z" fill="#2EB67D"/><path d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9zm0-6.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z" fill="#ECB22E"/></svg>
                 In Slack öffnen
             </button>
         </div>
@@ -113,53 +119,80 @@
         let serials = [];
         let lastCode = "";
         let lastTime = 0;
+        let audioCtx = null;
+
+        function playBeep() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.value = 880; gain.gain.value = 0.1;
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
 
         function onScanSuccess(decodedText) {
             const now = Date.now();
+            // Duplikate innerhalb von 2 Sekunden ignorieren
             if (decodedText === lastCode && (now - lastTime) < 2000) return;
-            lastCode = decodedText; lastTime = now;
+            
+            lastCode = decodedText;
+            lastTime = now;
             serials.push(decodedText);
+            
             document.getElementById('scanned-list').innerText = serials.join(', ');
+            playBeep();
             if (navigator.vibrate) navigator.vibrate(100);
+            
+            // Direkt in Zwischenablage legen
             navigator.clipboard.writeText(serials.join(', ')).catch(() => {});
         }
 
         async function copyList() {
             if (serials.length === 0) return;
             await navigator.clipboard.writeText(serials.join(', '));
-            alert("Kopiert!");
+            alert("Liste kopiert!");
         }
 
         function openSlack() {
-            if (serials.length === 0) return alert("Zuerst scannen!");
+            if (serials.length === 0) return alert("Bitte zuerst scannen!");
             navigator.clipboard.writeText(serials.join(', ')).then(() => {
                 window.location.href = "slack://open";
             });
         }
 
         function clearList() {
-            if (confirm("Liste leeren?")) {
-                serials = []; lastCode = "";
+            if (confirm("Liste wirklich leeren?")) {
+                serials = [];
+                lastCode = "";
                 document.getElementById('scanned-list').innerText = "Noch keine Scans...";
             }
         }
 
-        /* RESPONSIVE LOGIK FÜR DEN SCANNER */
+        // --- AUTOMATISCHER START MIT RÜCKKAMERA ---
         const html5QrCode = new Html5Qrcode("reader");
         const config = { 
-            fps: 10, 
+            fps: 15, 
             qrbox: function(viewfinderWidth, viewfinderHeight) {
-                // Das Scan-Quadrat passt sich der Bildschirmgröße an (80% der Breite)
                 const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                const fontSize = Math.floor(minEdge * 0.8);
-                return { width: fontSize, height: fontSize };
+                const size = Math.floor(minEdge * 0.7);
+                return { width: size, height: size };
             }
         };
 
+        // Startet direkt mit der Rückkamera (environment)
         html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+        .then(() => {
+            document.getElementById('status-msg').innerText = "Bereit zum Scannen";
+        })
         .catch(err => {
-            document.getElementById('status-msg').innerText = "Kamera-Fehler: Bitte Zugriff erlauben!";
+            console.error(err);
+            document.getElementById('status-msg').innerText = "Kamera-Zugriff verweigert oder nicht gefunden.";
         });
+
+        // Audio-Kontext aktivieren bei erstem Klick (iOS/Android Browser Vorschrift)
+        document.body.addEventListener('click', () => { 
+            if(!audioCtx) audioCtx = new AudioContext(); 
+        }, {once: true});
     </script>
 </body>
 </html>
